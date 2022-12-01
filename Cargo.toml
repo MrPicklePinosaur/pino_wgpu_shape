@@ -1,0 +1,12 @@
+[package]
+name = "pino_wgpu_shape"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["MrPicklePinosaur"]
+description = "a primitive shape rendering library for wgpu"
+repository = "https://github.com/MrPicklePinosaur/pino_wgpu_shape"
+
+[features]
+
+[dependencies]
