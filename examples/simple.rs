@@ -56,7 +56,7 @@ fn main() {
 
     surface.configure(&device, &config);
 
-    let shape_renderer = ShapeRenderer::new(&device, render_format);
+    let mut shape_renderer = ShapeRenderer::new(&device, render_format);
 
     // run event loop
     event_loop.run(move |event, _, control_flow| match event {

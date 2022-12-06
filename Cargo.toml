@@ -9,6 +9,7 @@ repository = "https://github.com/MrPicklePinosaur/pino_wgpu_shape"
 
 [dependencies]
 wgpu = "0.14"
+bytemuck = { version = "1.4", features = ["derive"] }
 
 [dev-dependencies]
 winit = "0.27"

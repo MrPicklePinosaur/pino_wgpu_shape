@@ -1,6 +1,6 @@
 //! A primitive shape rendering library
 
-use wgpu::include_wgsl;
+use wgpu::{include_wgsl, util::DeviceExt};
 
 const VERTEX_ENTRY_POINT: &'static str = "vs_main";
 const FRAGMENT_ENTRY_POINT: &'static str = "fs_main";
@@ -10,12 +10,50 @@ pub struct Point2D {
     pub y: f32
 }
 
+pub enum Shape {
+    Triangle(Triangle),
+    Quad(Quad),
+    Line(Line),
+}
+
+pub struct Triangle(pub Point2D, pub Point2D, pub Point2D);
+
 pub struct Quad(pub Point2D, pub Point2D, pub Point2D, pub Point2D);
 
 pub struct Line(pub Point2D, pub Point2D);
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    position: [f32; 3],
+    color: [f32; 3],
+}
+
+impl Vertex {
+
+    const ATTRIBS: [wgpu::VertexAttribute; 2] = wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3];
+
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<Self>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &Self::ATTRIBS,
+        }
+    }
+}
+
+const VERTICES: &[Vertex] = &[
+    Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0] },
+    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+];
+
 pub struct ShapeRenderer {
     pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
+    queue: Vec<Shape>,
 }
 
 impl ShapeRenderer {
@@ -24,6 +62,16 @@ impl ShapeRenderer {
 
 	let shader = device.create_shader_module(include_wgsl!("shaders/shader.wgsl"));
 
+	// create vertex buffer
+	let vertex_buffer = device.create_buffer_init(
+	    &wgpu::util::BufferInitDescriptor {
+		label: Some("Vertex Buffer"),
+		contents: bytemuck::cast_slice(VERTICES),
+		usage: wgpu::BufferUsages::VERTEX,
+	    }
+	);
+
+	// create render pipeline
 	let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 	    label: Some("Render Pipeline Layout"),
 	    bind_group_layouts: &[],
@@ -36,7 +84,9 @@ impl ShapeRenderer {
 	    vertex: wgpu::VertexState {
 		module: &shader,
 		entry_point: VERTEX_ENTRY_POINT,
-		buffers: &[]
+		buffers: &[
+		    Vertex::desc(),
+		]
 	    },
 	    fragment: Some(wgpu::FragmentState {
 		module: &shader,
@@ -67,10 +117,12 @@ impl ShapeRenderer {
 
 	ShapeRenderer {
 	    pipeline: render_pipeline,
+	    vertex_buffer,
+	    queue: vec![],
 	}
     }
 
-    pub fn draw(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+    pub fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
 	let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 	    label: Some("Render Pass"),
 	    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -89,9 +141,13 @@ impl ShapeRenderer {
 	    depth_stencil_attachment: None,
 	});
 	render_pass.set_pipeline(&self.pipeline);
+	render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+	render_pass.draw(0..(VERTICES.len() as u32), 0..1);
+
+	self.queue.clear();
     }
 
-    pub fn queue(&mut self) {
-	
+    pub fn queue(&mut self, shape: Shape) {
+	self.queue.push(shape);
     }
 }
