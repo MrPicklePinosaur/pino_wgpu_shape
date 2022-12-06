@@ -1,3 +1,4 @@
+use pino_wgpu_shape::ShapeRenderer;
 use wgpu::SurfaceError;
 use winit::{event_loop::{EventLoop, ControlFlow}, window::WindowBuilder, event::{Event, WindowEvent}};
 
@@ -55,6 +56,8 @@ fn main() {
 
     surface.configure(&device, &config);
 
+    let shape_renderer = ShapeRenderer::new(&device, render_format);
+
     // run event loop
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
@@ -80,7 +83,7 @@ fn main() {
 
 	    let output = surface.get_current_texture().expect("could not get texture");
 
-	    let view = output
+	    let mut view = output
 		.texture
 		.create_view(&wgpu::TextureViewDescriptor::default());
 	    let mut encoder = device
@@ -106,6 +109,8 @@ fn main() {
 		depth_stencil_attachment: None,
 	    });
 	    drop(render_pass);
+
+	    shape_renderer.draw(&mut encoder, &mut view);
 
 	    queue.submit(std::iter::once(encoder.finish()));
 	    output.present()
