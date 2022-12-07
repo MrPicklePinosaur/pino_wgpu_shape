@@ -1,6 +1,6 @@
 use pino_wgpu_shape::ShapeRenderer;
 use wgpu::SurfaceError;
-use winit::{event_loop::{EventLoop, ControlFlow}, window::WindowBuilder, event::{Event, WindowEvent}};
+use winit::{event_loop::{EventLoop, ControlFlow}, window::WindowBuilder, event::{Event, WindowEvent}, dpi::LogicalSize};
 
 fn main() {
 
@@ -8,6 +8,7 @@ fn main() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("highgui")
+        .with_inner_size(LogicalSize::new(300.0, 300.0))
         .build(&event_loop)
         .unwrap();
 
