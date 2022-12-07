@@ -9,6 +9,7 @@ struct InstanceInput {
     @location(6) model_mat_1: vec4<f32>,
     @location(7) model_mat_2: vec4<f32>,
     @location(8) model_mat_3: vec4<f32>,
+    @location(9) model_color: vec3<f32>,
 }
 
 struct VertexOutput {
@@ -29,7 +30,7 @@ fn vs_main(
     );
 
     var out: VertexOutput;
-    out.color = in.color;
+    out.color = instance.model_color;
     out.clip_position = model_mat * vec4<f32>(in.position, 1.0);
     return out;
 }

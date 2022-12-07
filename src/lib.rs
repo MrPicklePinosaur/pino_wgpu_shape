@@ -9,27 +9,6 @@ use wgpu::{include_wgsl, util::DeviceExt};
 const VERTEX_ENTRY_POINT: &'static str = "vs_main";
 const FRAGMENT_ENTRY_POINT: &'static str = "fs_main";
 
-pub struct Point2D {
-    pub x: f32,
-    pub y: f32,
-}
-
-pub enum Shape {
-    Triangle(Triangle),
-    Rect(Rect),
-    Quad(Quad),
-    Line(Line),
-}
-
-pub struct Triangle(pub Point2D, pub Point2D, pub Point2D);
-
-pub struct Quad(pub Point2D, pub Point2D, pub Point2D, pub Point2D);
-
-// top left, width, height
-pub struct Rect(pub Point2D, pub usize, pub usize);
-
-pub struct Line(pub Point2D, pub Point2D);
-
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
@@ -53,6 +32,7 @@ impl Vertex {
 pub struct Instance {
     pub position: Vector3<f32>,
     pub scale: Vector3<f32>,
+    pub color: Vector3<f32>,
 }
 
 impl Instance {
@@ -61,6 +41,7 @@ impl Instance {
             model: (cgmath::Matrix4::from_translation(self.position)
                 * cgmath::Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z))
             .into(),
+            color: self.color.into(),
         }
     }
 }
@@ -69,11 +50,11 @@ impl Instance {
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct InstanceRaw {
     model: [[f32; 4]; 4],
+    color: [f32; 3],
 }
 
 impl InstanceRaw {
-    const ATTRIBS: [wgpu::VertexAttribute; 4] =
-        wgpu::vertex_attr_array![5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4];
+    const ATTRIBS: [wgpu::VertexAttribute; 5] = wgpu::vertex_attr_array![5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x3];
 
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
@@ -88,19 +69,19 @@ impl InstanceRaw {
 const VERTICES: &[Vertex] = &[
     Vertex {
         position: [-0.5, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
+        color: [0.0, 0.0, 0.0],
     },
     Vertex {
         position: [-0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
+        color: [0.0, 0.0, 0.0],
     },
     Vertex {
         position: [0.5, -0.5, 0.0],
-        color: [0.0, 0.0, 1.0],
+        color: [0.0, 0.0, 0.0],
     },
     Vertex {
         position: [-0.5, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
+        color: [0.0, 0.0, 0.0],
     },
     Vertex {
         position: [0.5, -0.5, 0.0],
@@ -108,7 +89,7 @@ const VERTICES: &[Vertex] = &[
     },
     Vertex {
         position: [0.5, 0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
+        color: [0.0, 0.0, 0.0],
     },
 ];
 const INSTANCE_BUFFER_INIT_SIZE: usize = 64;
@@ -216,12 +197,7 @@ impl ShapeRenderer {
                 view: &view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 1.0,
-                        g: 1.0,
-                        b: 0.3,
-                        a: 1.0,
-                    }),
+                    load: wgpu::LoadOp::Load,
                     store: true,
                 },
             })],

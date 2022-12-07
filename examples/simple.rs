@@ -103,9 +103,9 @@ fn main() {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.0,
+                            r: 1.0,
                             g: 0.0,
-                            b: 0.0,
+                            b: 1.0,
                             a: 1.0,
                         }),
                         store: true,
@@ -119,10 +119,12 @@ fn main() {
                 Instance {
                     position: Vector3::new(0., 0., 0.),
                     scale: Vector3::new(1., 1., 1.),
+                    color: Vector3::new(1., 0., 0.),
                 },
                 Instance {
                     position: Vector3::new(1., 1., 1.),
                     scale: Vector3::new(1., 1., 1.),
+                    color: Vector3::new(0., 1., 0.),
                 },
             ];
             for instance in instances {
