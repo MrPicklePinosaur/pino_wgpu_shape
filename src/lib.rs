@@ -1,7 +1,8 @@
 //! A primitive shape rendering library
 
-use std::mem;
+use std::{mem, num::NonZeroU64};
 
+use bytemuck::bytes_of;
 use wgpu::{include_wgsl, util::DeviceExt};
 use cgmath::{prelude, num_traits::Pow, Vector3};
 
@@ -49,9 +50,9 @@ impl Vertex {
     }
 }
 
-struct Instance {
-    position: Vector3<f32>,
-    scale: Vector3<f32>,
+pub struct Instance {
+    pub position: Vector3<f32>,
+    pub scale: Vector3<f32>,
 }
 
 impl Instance {
@@ -96,7 +97,6 @@ const INSTANCE_BUFFER_INIT_SIZE: usize = 64;
 pub struct ShapeRenderer {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
-    queue: Vec<Shape>,
     instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
 }
@@ -116,22 +116,7 @@ impl ShapeRenderer {
 	    }
 	);
 
-	// create instances (REMOVE THIS LATER)
-	let instances = vec![
-	    Instance {position: Vector3::new(0., 0., 0.), scale: Vector3::new(1., 1., 1.)},
-	    Instance {position: Vector3::new(1., 1., 1.), scale: Vector3::new(1., 1., 1.)}
-	];
-	let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-
 	// create instance buffer
-	let instance_buffer = device.create_buffer_init(
-	    &wgpu::util::BufferInitDescriptor{
-		label: Some("Instance Buffer"),
-		contents: bytemuck::cast_slice(&instance_data),
-		usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-	    }
-	);
-	/*
 	let instance_buffer = device.create_buffer(
 	    &wgpu::BufferDescriptor {
 		label: Some("Instance Buffer"),
@@ -140,7 +125,6 @@ impl ShapeRenderer {
 		mapped_at_creation: false
 	    }
 	);
-	*/
 
 	// create render pipeline
 	let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -190,13 +174,21 @@ impl ShapeRenderer {
 	ShapeRenderer {
 	    pipeline: render_pipeline,
 	    vertex_buffer,
-	    queue: vec![],
-	    instances,
+	    instances: vec![],
 	    instance_buffer,
 	}
     }
 
-    pub fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+    pub fn draw(&mut self, device: &wgpu::Device, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, staging_belt: &mut wgpu::util::StagingBelt) {
+
+	// copy the new instance data
+	let instance_data = self.instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+	let instances_bytes: &[u8] = bytemuck::cast_slice(&instance_data);
+	if let Some(size) = NonZeroU64::new(instances_bytes.len() as u64) {
+	    let mut instances_view = staging_belt.write_buffer(encoder, &self.instance_buffer, 0, size, device);
+	    instances_view.copy_from_slice(instances_bytes);
+	}
+
 	let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 	    label: Some("Render Pass"),
 	    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -219,10 +211,10 @@ impl ShapeRenderer {
 	render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 	render_pass.draw(0..(VERTICES.len() as u32), 0..self.instances.len() as _);
 
-	self.queue.clear();
+	self.instances.clear();
     }
 
-    pub fn queue(&mut self, shape: Shape) {
-	self.queue.push(shape);
+    pub fn queue(&mut self, instance: Instance) {
+	self.instances.push(instance);
     }
 }

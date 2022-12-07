@@ -1,6 +1,7 @@
-use pino_wgpu_shape::ShapeRenderer;
+use pino_wgpu_shape::{ShapeRenderer, Instance};
 use wgpu::SurfaceError;
 use winit::{event_loop::{EventLoop, ControlFlow}, window::WindowBuilder, event::{Event, WindowEvent}, dpi::LogicalSize};
+use cgmath::Vector3;
 
 fn main() {
 
@@ -58,6 +59,7 @@ fn main() {
     surface.configure(&device, &config);
 
     let mut shape_renderer = ShapeRenderer::new(&device, render_format);
+    let mut staging_belt =  wgpu::util::StagingBelt::new(1024);
 
     // run event loop
     event_loop.run(move |event, _, control_flow| match event {
@@ -111,10 +113,19 @@ fn main() {
 	    });
 	    drop(render_pass);
 
-	    shape_renderer.draw(&mut encoder, &mut view);
+	    let instances = vec![
+		Instance {position: Vector3::new(0., 0., 0.), scale: Vector3::new(1., 1., 1.)},
+		Instance {position: Vector3::new(1., 1., 1.), scale: Vector3::new(1., 1., 1.)}
+	    ];
+	    for instance in instances {
+		shape_renderer.queue(instance);
+	    }
+	    shape_renderer.draw(&device, &mut encoder, &mut view, &mut staging_belt);
 
+	    staging_belt.finish();
 	    queue.submit(std::iter::once(encoder.finish()));
-	    output.present()
+	    output.present();
+	    staging_belt.recall();
 
         }
 
