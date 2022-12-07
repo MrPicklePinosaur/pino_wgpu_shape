@@ -3,11 +3,30 @@
 use std::{mem, num::NonZeroU64};
 
 use bytemuck::bytes_of;
-use cgmath::{num_traits::Pow, prelude, Vector3};
+use cgmath::{num_traits::Pow, prelude, Vector2, Vector3};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 const VERTEX_ENTRY_POINT: &'static str = "vs_main";
 const FRAGMENT_ENTRY_POINT: &'static str = "fs_main";
+
+/// Rect rendering primitive
+pub struct Rect {
+    /// Position of top left corner
+    pub position: Vector3<f32>,
+    /// In pixels
+    pub dimension: Vector2<f32>,
+    pub color: Vector3<f32>,
+}
+
+impl Default for Rect {
+    fn default() -> Self {
+        Rect {
+            position: Vector3::new(0., 0., 0.),
+            dimension: Vector2::new(1., 1.),
+            color: Vector3::new(1., 1., 1.),
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -68,27 +87,27 @@ impl InstanceRaw {
 // this is a square
 const VERTICES: &[Vertex] = &[
     Vertex {
-        position: [-0.5, 0.5, 0.0],
+        position: [-1.0, 1.0, 0.0],
         color: [0.0, 0.0, 0.0],
     },
     Vertex {
-        position: [-0.5, -0.5, 0.0],
+        position: [-1.0, -1.0, 0.0],
         color: [0.0, 0.0, 0.0],
     },
     Vertex {
-        position: [0.5, -0.5, 0.0],
+        position: [1.0, -1.0, 0.0],
         color: [0.0, 0.0, 0.0],
     },
     Vertex {
-        position: [-0.5, 0.5, 0.0],
+        position: [-1.0, 1.0, 0.0],
         color: [0.0, 0.0, 0.0],
     },
     Vertex {
-        position: [0.5, -0.5, 0.0],
+        position: [1.0, -1.0, 0.0],
         color: [0.0, 0.0, 1.0],
     },
     Vertex {
-        position: [0.5, 0.5, 0.0],
+        position: [1.0, 1.0, 0.0],
         color: [0.0, 0.0, 0.0],
     },
 ];
